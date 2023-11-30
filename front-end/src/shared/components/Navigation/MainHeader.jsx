@@ -1,7 +1,7 @@
 import "./MainHeader.css";
 
-function MainHeader({ children }) {
-  return <header className="main-header">{children}</header>;
+function MainHeader(props) {
+  return <header className="main-header">{props.children}</header>;
 }
 
 export default MainHeader;
