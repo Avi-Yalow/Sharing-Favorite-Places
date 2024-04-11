@@ -1,4 +1,5 @@
 const uuid = require('uuid');
+const Place = require('../models/place')
 const { validationResult } = require('express-validator');
 
 const HttpError = require('../models/http-error');
@@ -18,18 +19,27 @@ let DUMMY_PLACES = [
   }
 ];
 
-const getPlaceById = (req, res, next) => {
+const getPlaceById = async (req, res, next) => {
   const placeId = req.params.pid; // { pid: 'p1' }
 
-  const place = DUMMY_PLACES.find(p => {
-    return p.id === placeId;
-  });
-
-  if (!place) {
-    throw new HttpError('Could not find a place for the provided id.', 404);
+  let place
+  try{
+   place = await Place.findById(placeId)
+  }
+  catch(err){
+    const error = new HttpError(
+        'Somnthing went wrong, could not find a place',
+        500
+    )
+    return next(error)
   }
 
-  res.json({ place }); // => { place } => { place: place }
+  if (!place) {
+    const error= new HttpError('Could not find a place for the provided id.', 404);
+    return next(error)
+  }
+
+  res.json({ place: place.toObject({getters: true}) }); // => { place } => { place: place }
 };
 
 // function getPlaceById() { ... }
@@ -69,16 +79,25 @@ const createPlace = async (req, res, next) => {
   }
 
   // const title = req.body.title;
-  const createdPlace = {
-    id: uuid(),
+  const createdPlace = new Place({
     title,
     description,
     location: coordinates,
     address,
+    image: 'https://www.google.com/imgres?q=vilage&imgurl=https%3A%2F%2Fimages-wixmp-ed30a86b8c4ca887773594c2.wixmp.com%2Ff%2F02fd6c69-0abe-440c-8a31-b1fd6dcd2a6e%2Fdfxwloi-7e38bc48-08b9-49e9-b1dd-09d08471b995.png%2Fv1%2Ffill%2Fw_623%2Ch_350%2Cq_70%2Cstrp%2F947_by_xavcovert_dfxwloi-350t.jpg%3Ftoken%3DeyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTA3OCIsInBhdGgiOiJcL2ZcLzAyZmQ2YzY5LTBhYmUtNDQwYy04YTMxLWIxZmQ2ZGNkMmE2ZVwvZGZ4d2xvaS03ZTM4YmM0OC0wOGI5LTQ5ZTktYjFkZC0wOWQwODQ3MWI5OTUucG5nIiwid2lkdGgiOiI8PTE5MjAifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.6KAHZVgA_uQdvuciLLXhGHINSm1D3nZmqMgDN_1K_bM&imgrefurl=https%3A%2F%2Fwww.deviantart.com%2Ftag%2Fvilage&docid=LbLffQ9miDt0kM&tbnid=v2Rjnm-hEVSjDM&vet=12ahUKEwjMqLWl5bqFAxWWi_0HHdH2ArAQM3oECBkQAA..i&w=623&h=350&hcb=2&ved=2ahUKEwjMqLWl5bqFAxWWi_0HHdH2ArAQM3oECBkQAA',
     creator
-  };
+  });
 
-  DUMMY_PLACES.push(createdPlace); //unshift(createdPlace)
+  try {
+    await createdPlace.save();
+  }
+  catch(err){
+const error = new HttpError(
+    'Creating place failed, please try again.',
+    500
+)
+return next(error)
+  }
 
   res.status(201).json({ place: createdPlace });
 };
