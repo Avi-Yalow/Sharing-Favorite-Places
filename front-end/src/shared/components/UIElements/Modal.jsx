@@ -30,12 +30,14 @@ const Modal = (props) => {
   return (
     <React.Fragment>
       {props.show && <Backdrop onClick={props.onCancel} />}
-      <div classNames="modal" in={props.show}>
-        {/* in={props.show}
+      {props.show && (
+        <div classNames="modal">
+          {/* in={props.show}
         mountOnEnter unmountOnExit timeout={200}
         classNames="modal" > */}
-        <ModalOverlay {...props} />
-      </div>
+          <ModalOverlay {...props} />
+        </div>
+      )}
     </React.Fragment>
   );
 };
