@@ -1,5 +1,6 @@
 const uuid = require("uuid");
 const Place = require("../models/place");
+const User = require("../models/user")
 const { validationResult } = require("express-validator");
 
 const HttpError = require("../models/http-error");
@@ -98,9 +99,28 @@ const createPlace = async (req, res, next) => {
       "https://www.google.com/imgres?q=vilage&imgurl=https%3A%2F%2Fimages-wixmp-ed30a86b8c4ca887773594c2.wixmp.com%2Ff%2F02fd6c69-0abe-440c-8a31-b1fd6dcd2a6e%2Fdfxwloi-7e38bc48-08b9-49e9-b1dd-09d08471b995.png%2Fv1%2Ffill%2Fw_623%2Ch_350%2Cq_70%2Cstrp%2F947_by_xavcovert_dfxwloi-350t.jpg%3Ftoken%3DeyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTA3OCIsInBhdGgiOiJcL2ZcLzAyZmQ2YzY5LTBhYmUtNDQwYy04YTMxLWIxZmQ2ZGNkMmE2ZVwvZGZ4d2xvaS03ZTM4YmM0OC0wOGI5LTQ5ZTktYjFkZC0wOWQwODQ3MWI5OTUucG5nIiwid2lkdGgiOiI8PTE5MjAifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.6KAHZVgA_uQdvuciLLXhGHINSm1D3nZmqMgDN_1K_bM&imgrefurl=https%3A%2F%2Fwww.deviantart.com%2Ftag%2Fvilage&docid=LbLffQ9miDt0kM&tbnid=v2Rjnm-hEVSjDM&vet=12ahUKEwjMqLWl5bqFAxWWi_0HHdH2ArAQM3oECBkQAA..i&w=623&h=350&hcb=2&ved=2ahUKEwjMqLWl5bqFAxWWi_0HHdH2ArAQM3oECBkQAA",
     creator,
   });
+let user
+try {
+  user = await User.findById(creator)
+} catch (err) {
+  const error = new HttpError(
+    'Creating places failed, please try again'
+  )
+  return next(error)
+}
+if (!user){
+  const error = new HttpError('Could not find user to provided id',404)
+return next(error)
+}
+console.log(user)
 
   try {
-    await createdPlace.save();
+    const sess = await mongoose.startSession()
+    sess.startTransaction()
+    await createdPlace.save({session: sess});
+     user.places.push(createdPlace)
+     await user.save({session: sess})
+     await sess.commitTransaction()
   } catch (err) {
     const error = new HttpError(
       "Creating place failed, please try again.",
@@ -115,8 +135,8 @@ const createPlace = async (req, res, next) => {
 const updatePlace = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    throw new HttpError("Invalid inputs passed, please check your data.", 422);
-  }
+  return next( new HttpError("Invalid inputs passed, please check your data.", 422)
+)}
 
   const { title, description } = req.body;
   const placeId = req.params.pid;
